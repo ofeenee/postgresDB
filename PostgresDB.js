@@ -62,7 +62,7 @@ function PostgresDB({
     Model.knex(knex);
 
     // User model.
-    class User extends Model {
+    class Postgres extends Model {
 
       static get tableName() {
         return tableName;
