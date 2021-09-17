@@ -230,7 +230,7 @@ function PostgresDB({
 
     } // User Model end
 
-    return User;
+    return Postgres;
   }
   catch (error) {
    throw error;
