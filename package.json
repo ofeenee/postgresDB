@@ -1,7 +1,7 @@
 {
   "name": "@ofeenee/postgresdb",
   "type": "module",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "a simple module to manage a simple postgres db and it's tables.",
   "main": "PostgresDB.js",
   "directories": {
