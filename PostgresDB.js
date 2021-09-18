@@ -11,6 +11,7 @@ const {
   isMobilePhone,
  } = validator;
 
+
 const SCHEMA = {
   type: 'object',
   required: ['email', 'password'],
@@ -20,6 +21,7 @@ const SCHEMA = {
     email: { type: ['string'] },
     password: { type: 'string', minLength: 95, maxLength: 95 },
     phone: { type: 'string', minLength: 5, maxLength: 15 },
+    role: {type: 'string', enum: ['admin', 'vip', 'premium', 'member', 'basic']},
     created_at: { type: 'timestamp' },
     updated_at: { type: 'timestamp' },
   }
@@ -37,7 +39,7 @@ function PostgresDB({
 } = {
   schema: SCHEMA,
   client: 'pg',
-  host: '127.0.0.1',
+  host: 'localhost',
   port: '5432',
   database: 'localhost_db',
   tableName: 'users',
@@ -45,8 +47,9 @@ function PostgresDB({
   password: null
 }) {
   try {
-    if (new.target === undefined)
-      return new PostgresDB({client, host, port, database, tableName, user, password});
+
+    if (user === 'null') user = null;
+    if (password === 'null') password = null;
 
     const knex = Knex({
       client,
@@ -61,7 +64,7 @@ function PostgresDB({
 
     Model.knex(knex);
 
-    // User model.
+    // Postgres client model.
     class Postgres extends Model {
 
       static get tableName() {
@@ -75,7 +78,6 @@ function PostgresDB({
       static get jsonSchema() {
         return schema;
       }
-
       static async createSchema() {
         try {
           await knex.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
@@ -87,7 +89,6 @@ function PostgresDB({
           // Create database schema. You should use knex migration files
           // to do this. We create it here for simplicity.
           await knex.schema.createTable(tableName, async (table) => {
-            // await knex.schema.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
             table.uuid('id').primary().notNullable();
             table.string('email').notNullable().unique(`email:${tableName}`);
             table.string('password').notNullable().index(`password:${tableName}`);
@@ -97,11 +98,11 @@ function PostgresDB({
             table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
           });
 
-          return {success: true, operation: 'table created'};
+          return { success: true, operation: 'table created' };
         }
         catch (error) {
-          console.log(error.message);
-          return { success: false, operation: 'check/create table', details: error.message };
+          throw error;
+          return { success: false, operation: 'check/create table', details: error.message, error };
         }
       }
 
@@ -126,7 +127,8 @@ function PostgresDB({
 
       async insertNewUser({email, phone, password, id}) {
         try {
-          const response = await User.query().insertAndFetch(validateArguments({email, phone, password, id}));
+          const valid = validateArguments({ email, phone, password, id })
+          const response = await Postgres.query().insertAndFetch(valid);
           return response;
         }
         catch (error) {
@@ -139,7 +141,7 @@ function PostgresDB({
           if (!isString(id) || !isUUID(id))
             throw new Error('id invalid.')
 
-          const response = await User.query().findById(id);
+          const response = await Postgres.query().findById(id);
           return response;
         }
         catch (error) {
@@ -152,7 +154,7 @@ function PostgresDB({
           if (!isString(email) || !isEmail(email))
             throw new Error('email invalid.')
 
-          const response = await User.query().findOne({email});
+          const response = await Postgres.query().findOne({email});
           return response;
         }
         catch (error) {
@@ -165,7 +167,7 @@ function PostgresDB({
           if (!isString(phone) || !isMobilePhone(phone, 'any', {strictMode: true}))
             throw new Error('phone invalid.')
 
-          const response = await User.query().findOne({phone});
+          const response = await Postgres.query().findOne({phone});
           return response
         }
         catch (error) {
@@ -179,7 +181,7 @@ function PostgresDB({
             throw new Error('email invalid.');
 
           this.email = email;
-          const response = await User.query().updateAndFetchById(id, this);
+          const response = await Postgres.query().updateAndFetchById(id, this);
           return response;
         }
         catch (error) {
@@ -193,7 +195,7 @@ function PostgresDB({
             throw new Error('password invalid.');
 
           this.password = password;
-          const response = await User.query().updateAndFetchById(id, this);
+          const response = await Postgres.query().updateAndFetchById(id, this);
           return response;
         }
         catch (error) {
@@ -207,7 +209,7 @@ function PostgresDB({
             throw new Error('phone invalid.');
 
           this.phone = phone;
-          const response = await User.query().updateAndFetchById(id, this);
+          const response = await Postgres.query().updateAndFetchById(id, this);
           return response;
         }
         catch (error) {
@@ -220,7 +222,7 @@ function PostgresDB({
           if (!isString(id) || !isUUID(id))
             throw new Error('id invalid.');
 
-          const response = await User.query().deleteById(id);
+          const response = await Postgres.query().deleteById(id);
           return response;
         }
         catch (error) {
@@ -228,8 +230,7 @@ function PostgresDB({
         }
       }
 
-    } // User Model end
-
+    } // Postgres client Model end
     return Postgres;
   }
   catch (error) {
@@ -242,7 +243,7 @@ export default PostgresDB;
 
 // HELPER FUNCTIONS
 
-// validate object
+// validate required arguments of object
 function validateArguments({email, phone, password, id} = {}) {
    try {
      if (typeof email !== 'string' || !email || !isEmail(email)) throw new Error('email argument invalid.');
@@ -285,233 +286,3 @@ function isString(value) {
     throw error;
   }
 }
-
-const init = async () => {
-  try {
-    await createSchema();
-
-    Object.defineProperties(this, {
-      reference: {
-        value: null,
-        configurable: true
-      },
-      getById: {
-        value: async (id) => {
-          try {
-
-            if (typeof id !== 'string' && !isUUID(id))
-              throw new Error('id invalid.');
-
-            const response = await this.$query().findById(id);
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response ?? null;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      getByEmail: {
-        value: async (email) => {
-          try {
-
-            if (typeof email !== 'string' && isEmail(email))
-              throw new Error('email invalid.');
-
-            const response = await this.$query().findOne({ email });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response ?? null;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      getByPhone: {
-        value: async (phone) => {
-          try {
-
-            if (typeof phone !== 'string' && isMobilePhone(phone, 'any', { strictMode: true }))
-              throw new Error('phone invalid.');
-
-            const response = await this.$query().findOne({ phone });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response ?? null;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      insertNewUser: {
-        value: async ({ email, password, phone, id }) => {
-          try {
-
-            const valid = validateArguments({ email, password, phone, id });
-            if (!valid) throw new Error('arguments invalid.');
-
-            const response = await this.$query().insertAndFetch(valid);
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      updateEmail: {
-        value: async ({ email, id }) => {
-          try {
-            if (typeof id !== 'string' || !isUUID(id))
-              throw new Error('id invalid.');
-            if (typeof email !== 'string' || !isEmail(email))
-              throw new Error('email invalid.');
-
-            const { password, phone } = this.reference;
-            const response = await this.$query().updateAndFetchById(id, { email, password, phone });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            console.log('update error');
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      updatePassword: {
-        value: async (password) => {
-          try {
-
-            if (typeof id !== 'string' || !isUUID(id))
-              throw new Error('id invalid.');
-            if (typeof password !== 'string' || !isHash(password))
-              throw new Error('password invalid.');
-
-            const { email, phone } = this.reference;
-            const response = await this.$query().updateAndFetchById(id, { email, password, phone });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      updatePhone: {
-        value: async (phone) => {
-          try {
-            if (typeof id !== 'string' || !isUUID(id))
-              throw new Error('id invalid.');
-            if (typeof phone !== 'string' || !isMobilePhone(phone, 'any', { strictMode: true }))
-              throw new Error('phone invalid.');
-
-            const { password, email } = this.reference;
-            const response = await this.$query().updateAndFetchById(id, { email, password, phone });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      updateRole: {
-        value: async (role) => {
-          try {
-            if (typeof id !== 'string' || !isUUID(id))
-              throw new Error('id invalid.');
-            if (typeof role !== 'string' || !['basic', 'premium', 'vip', 'admin'].includes(role))
-              throw new Error('role invalid.');
-
-            const { password, email, phone } = this.reference;
-            const response = await this.$query().updateAndFetchById(id, { email, password, phone, role });
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: response,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-      deleteById: {
-        value: async (id) => {
-          try {
-
-            if (typeof id !== 'string' && !isUUID(id))
-              throw new Error('id invalid.');
-
-            const response = await this.$query().deleteById(id);
-
-            if (response) Object.defineProperty(this, 'reference', {
-              value: null,
-              configurable: true
-            });
-
-            return response;
-          }
-          catch (error) {
-            throw error;
-          }
-        },
-        enumerable: true
-      },
-    });
-    return delete this.init;
-  }
-  catch (error) {
-    throw error;
-  }
-};
-
-// return Object.defineProperty(this, 'init', {
-//   value: init,
-//   enumerable: true,
-//   configurable: true
-// });

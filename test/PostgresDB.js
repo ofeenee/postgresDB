@@ -1,17 +1,16 @@
 import {assert} from "chai";
 
-import PostgresDB from '../PostgresDB.js';
-
+import PDB from '../PostgresDB.js';
 const yousif = {
   email: 'yousif@almudhaf.com',
   password: '$argon2i$v=19$m=4096,t=3,p=1$3N0us+jqJpt823mgfD9YVA$dPs2u8gHPeujO5QV9Rk5BrHaE7eGDgU/HUPDQE78L0M',
   phone: '+96555968743',
-  id: '9B6C8B3B-A1AE-463B-92AF-BE572CFF5A28'.toLocaleLowerCase()
+  id: '9b6c8b3b-a1ae-463b-92af-be572cff5a28'
 };
 
-describe('PostgresDB()', async function() {
-  const User = new PostgresDB();
-  const user = new User();
+describe('new Postgres()', async function() {
+  const Postgres = PDB();
+  const postgres = new Postgres();
 
   beforeEach(function (done) {
     setTimeout(done, 250);
@@ -19,18 +18,17 @@ describe('PostgresDB()', async function() {
 
   it(`createSchema() (table users if not exist)`, async function() {
     try {
-      const tableReady = await User.createSchema();
+      const tableReady = await Postgres.createSchema();
       assert.isTrue(tableReady.success);
-      console.info('   ', tableReady);
     }
     catch (error) {
       assert.fail(error.message);
     }
   });
 
-  it(`new User()`, function() {
+  it(`new Postgres()`, function() {
     try {
-      assert.instanceOf(user, User);
+      assert.instanceOf(postgres, Postgres);
     }
     catch (error) {
       assert.fail(error.message);
@@ -39,7 +37,7 @@ describe('PostgresDB()', async function() {
 
   it(`insertNewUser(${yousif.email})`, async function () {
     try {
-      const response = await user.insertNewUser(yousif);
+      const response = await postgres.insertNewUser(yousif);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.id, yousif.id);
@@ -62,7 +60,7 @@ describe('PostgresDB()', async function() {
 
   it(`getById(${yousif.id})`, async function() {
     try {
-      const response = await user.getById(yousif.id);
+      const response = await postgres.getById(yousif.id);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.id, yousif.id);
@@ -84,7 +82,7 @@ describe('PostgresDB()', async function() {
 
   it(`getByEmail(${yousif.email})`, async function() {
     try {
-      const response = await user.getByEmail(yousif.email);
+      const response = await postgres.getByEmail(yousif.email);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.id, yousif.id);
@@ -105,7 +103,7 @@ describe('PostgresDB()', async function() {
 
   it(`getByPhone(${yousif.phone})`, async function() {
     try {
-      const response = await user.getByPhone(yousif.phone);
+      const response = await postgres.getByPhone(yousif.phone);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.id, yousif.id);
@@ -127,7 +125,7 @@ describe('PostgresDB()', async function() {
   it(`updateEmail(${'ofeenee@gmail.com'})`, async function () {
     try {
       yousif.email = 'ofeenee@gmail.com';
-      const response = await user.updateEmail(yousif);
+      const response = await postgres.updateEmail(yousif);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.email, 'ofeenee@gmail.com');
@@ -150,7 +148,7 @@ describe('PostgresDB()', async function() {
   it(`updatePhone(${'+96555566872'})`, async function () {
     try {
       yousif.phone = '+96555566872';
-      const response = await user.updatePhone(yousif);
+      const response = await postgres.updatePhone(yousif);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.phone, '+96555566872');
@@ -173,7 +171,7 @@ describe('PostgresDB()', async function() {
   it(`updatePassword(${'$argon2i$v=19$m=4096,t=3,p=1$zns6qnFQHUYcvyk3fZlxKQ$6Fye0j9ZMrYxNd/qDtRmBrimgyXVUClOF2KmiAynJZc'})`, async function () {
     try {
       yousif.password = '$argon2i$v=19$m=4096,t=3,p=1$zns6qnFQHUYcvyk3fZlxKQ$6Fye0j9ZMrYxNd/qDtRmBrimgyXVUClOF2KmiAynJZc';
-      const response = await user.updatePassword(yousif);
+      const response = await postgres.updatePassword(yousif);
 
       assert.hasAllKeys(response, ['created_at', 'updated_at', 'role', ...Object.keys(yousif)]);
       assert.strictEqual(response.password, '$argon2i$v=19$m=4096,t=3,p=1$zns6qnFQHUYcvyk3fZlxKQ$6Fye0j9ZMrYxNd/qDtRmBrimgyXVUClOF2KmiAynJZc');
@@ -195,7 +193,7 @@ describe('PostgresDB()', async function() {
 
   it(`deleteById(${yousif.id})`, async function() {
     try {
-      const response = await user.deleteById(yousif.id);
+      const response = await postgres.deleteById(yousif.id);
       assert.strictEqual(response, 1);
     }
     catch (error) {
@@ -204,7 +202,7 @@ describe('PostgresDB()', async function() {
   }).timeout(10000);
 
   after(async () => {
-    await user.$knex().destroy();
+    await postgres.$knex().destroy();
   });
 
 
