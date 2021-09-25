@@ -191,6 +191,29 @@ describe('new Postgres()', async function() {
     }
   }).timeout(10000);
 
+  it(`updateRole(${'vip'})`, async function () {
+    try {
+      yousif.role = 'vip';
+      const response = await postgres.updateRole(yousif);
+
+      assert.hasAllKeys(response, ['created_at', 'updated_at', ...Object.keys(yousif)]);
+      assert.strictEqual(response.role, 'vip');
+      assert.strictEqual(response.email, yousif.email);
+      assert.strictEqual(response.id, yousif.id);
+      assert.strictEqual(response.password, yousif.password);
+      assert.strictEqual(response.phone, yousif.phone);
+      assert.isDefined(response.created_at);
+      assert.instanceOf(response.created_at, Date);
+      assert.isDefined(response.updated_at);
+      assert.instanceOf(response.updated_at, Date);
+      assert.notStrictEqual(Date.parse(response.created_at), Date.parse(response.updated_at));
+
+    }
+    catch (error) {
+      assert.fail(error.message);
+    }
+  }).timeout(10000);
+
   it(`deleteById(${yousif.id})`, async function() {
     try {
       const response = await postgres.deleteById(yousif.id);
