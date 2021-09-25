@@ -11,6 +11,8 @@ const {
   isMobilePhone,
  } = validator;
 
+const ROLES = ['admin', 'vip', 'premium', 'member', 'basic']
+
 
 const SCHEMA = {
   type: 'object',
@@ -21,7 +23,7 @@ const SCHEMA = {
     email: { type: ['string'] },
     password: { type: 'string', minLength: 95, maxLength: 95 },
     phone: { type: 'string', minLength: 5, maxLength: 15 },
-    role: {type: 'string', enum: ['admin', 'vip', 'premium', 'member', 'basic']},
+    role: {type: 'string', enum: ROLES},
     created_at: { type: 'timestamp' },
     updated_at: { type: 'timestamp' },
   }
@@ -209,6 +211,19 @@ function PostgresDB({
             throw new Error('phone invalid.');
 
           this.phone = phone;
+          const response = await Postgres.query().updateAndFetchById(id, this);
+          return response;
+        }
+        catch (error) {
+          throw error;
+        }
+      }
+      async updateRole({role, id}) {
+        try {
+          if (!isString(role) || !ROLES.includes(role))
+            throw new Error('role invalid.');
+
+          this.role = role;
           const response = await Postgres.query().updateAndFetchById(id, this);
           return response;
         }
